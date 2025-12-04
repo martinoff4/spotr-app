@@ -1,16 +1,18 @@
-import React from 'react';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import HomeScreen from '../screens/HomeScreen';
-import MapScreen from '../screens/MapScreen';
-import FavoritesScreen from '../screens/FavoritesScreen';
-import ProfileScreen from '../screens/Profile/ProfileScreen';
-import SpotDetailsScreen from '../screens/SpotDetailsScreen';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React from 'react';
 import AddSpotScreen from '../screens/AddSpotScreen';
 import CitySelectScreen from '../screens/CitySelectScreen';
 import CommentsScreen from '../screens/CommentsScreen';
+import DiscoverScreen from '../screens/Discover/DiscoverScreen';
+import FavoritesScreen from '../screens/FavoritesScreen';
+import HomeScreen from '../screens/HomeScreen';
+import MapScreen from '../screens/MapScreen';
+import ProfileScreen from '../screens/Profile/ProfileScreen';
+import PublicProfile from '../screens/Profile/PublicProfile';
 import RateSpotScreen from '../screens/RateSpotScreen';
+import SpotDetailsScreen from '../screens/SpotDetailsScreen';
 import { background, card, primary, textPrimary, textSecondary } from '../theme/colors';
 
 const Stack = createNativeStackNavigator();
@@ -18,6 +20,7 @@ const Tab = createBottomTabNavigator();
 
 const tabIcons = {
   Home: 'compass',
+  Discover: 'search',
   Map: 'map',
   Favorites: 'heart',
   Profile: 'person',
@@ -46,6 +49,11 @@ function MainTabs() {
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen
+        name="Discover"
+        component={DiscoverScreen}
+        options={{ title: 'Открий' }}
+      />
       <Tab.Screen name="Map" component={MapScreen} />
       <Tab.Screen name="Favorites" component={FavoritesScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
@@ -68,6 +76,11 @@ export default function RootNavigator() {
         name="SpotDetails"
         component={SpotDetailsScreen}
         options={{ title: 'Spot details', headerBackTitle: 'Назад' }}
+      />
+      <Stack.Screen
+        name="PublicProfile"
+        component={PublicProfile}
+        options={{ headerShown: false }}
       />
       <Stack.Screen name="AddSpot" options={{ title: 'Add spot' }} component={AddSpotScreen} />
       <Stack.Screen

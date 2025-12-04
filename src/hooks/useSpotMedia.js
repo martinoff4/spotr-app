@@ -38,12 +38,13 @@ export function useSpotMedia(spotId) {
     };
   }, [spotId]);
 
-  const addItems = async (uris) => {
+  const addItems = async (uris, userInfo = {}) => {
     if (!spotId) return;
     if (!uris?.length) return;
     const next = await addSpotMedia(
       spotId,
       uris.map((uri) => ({ uri })),
+      userInfo
     );
     setMedia(next);
   };

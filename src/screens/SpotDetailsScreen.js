@@ -1,28 +1,29 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react';
+import { Feather } from '@expo/vector-icons';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActionSheetIOS,
+  Alert,
+  FlatList,
+  Image,
+  Modal,
+  Platform,
   SafeAreaView,
   ScrollView,
-  View,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  Image,
-  FlatList,
-  useWindowDimensions,
-  Modal,
-  ActionSheetIOS,
-  Platform,
-  Alert,
   TouchableWithoutFeedback,
+  useWindowDimensions,
+  View,
 } from 'react-native';
-import { useNavigation, useIsFocused } from '@react-navigation/native';
-import { Feather } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import { background, card, primary, textPrimary, textSecondary } from '../theme/colors';
 import { useSpots } from '../context/SpotsContext';
-import { chooseNavigationApp } from '../utils/navigationUtils';
 import { useSpotMedia } from '../hooks/useSpotMedia';
 import { getUserProfile, updateUserProfile } from '../storage/userProfile';
+import { getSpotMedia } from '../store/spotMediaStore';
+import { background, card, primary, textPrimary, textSecondary } from '../theme/colors';
+import { chooseNavigationApp } from '../utils/navigationUtils';
 
 const riskBadges = {
   low: { label: 'Нисък риск', bg: '#166534' },
@@ -238,9 +239,13 @@ export default function SpotDetailsScreen({ route }) {
         uris = await requestLibrary();
       }
       if (uris && uris.length && spot?.id) {
-        await addMediaItems(uris);
+        const profile = await getUserProfile();
+        await addMediaItems(uris, {
+          userId: profile.id,
+          username: profile.username,
+          avatar: profile.avatar,
+        });
         try {
-          const profile = await getUserProfile();
           const photos = Array.isArray(profile.photos) ? profile.photos : [];
           const filtered = photos.filter((item) => item.spotId !== spot.id);
           const newEntry = {
@@ -286,6 +291,45 @@ export default function SpotDetailsScreen({ route }) {
         { text: 'Отказ', style: 'cancel' },
       ]);
     }
+  };
+
+  const navigateToProfile = async (mediaItem) => {
+    const userId = mediaItem.userId;
+    const username = mediaItem.username || 'Spotr User';
+    const avatar = mediaItem.avatar || null;
+
+    let userPhotos = [];
+
+    if (userId) {
+      const profile = await getUserProfile();
+      if (profile.id === userId) {
+        userPhotos = profile.photos || [];
+      } else {
+        for (const s of spots) {
+          const media = await getSpotMedia(s.id);
+          const match = media.filter((m) => m.userId === userId);
+          userPhotos = [...userPhotos, ...match];
+        }
+      }
+    } else {
+      userPhotos = [mediaItem];
+    }
+
+    const unique = [];
+    const seen = new Set();
+    for (const p of userPhotos) {
+      if (!seen.has(p.uri)) {
+        seen.add(p.uri);
+        unique.push(p);
+      }
+    }
+
+    navigation.navigate('PublicProfile', {
+      userId,
+      username,
+      avatar,
+      photos: unique,
+    });
   };
 
   const openViewer = (index) => {
@@ -430,19 +474,35 @@ export default function SpotDetailsScreen({ route }) {
               {orderedCommunityPhotos.map((mediaItem, index) => {
                 const isUserPhoto = Boolean(userSpotPhoto && mediaItem.uri === userSpotPhoto);
                 return (
-                  <TouchableOpacity
-                    key={mediaItem.id}
-                    style={[styles.postTile, { width: tileWidth }]}
-                    onPress={() => openViewer(index)}
-                    activeOpacity={0.9}
-                  >
-                    <Image source={{ uri: mediaItem.uri }} style={styles.postImage} />
-                    {isUserPhoto && (
-                      <View style={styles.myPhotoBadge}>
-                        <Text style={styles.myPhotoBadgeText}>Твоят кадър</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
+                  <View key={mediaItem.id} style={{ width: tileWidth }}>
+                    <TouchableOpacity
+                      style={styles.postTile}
+                      onPress={() => openViewer(index)}
+                      activeOpacity={0.9}
+                    >
+                      <Image source={{ uri: mediaItem.uri }} style={styles.postImage} />
+                      {isUserPhoto && (
+                        <View style={styles.myPhotoBadge}>
+                          <Text style={styles.myPhotoBadgeText}>Твоят кадър</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.userRow}
+                      onPress={() => navigateToProfile(mediaItem)}
+                    >
+                      {mediaItem.avatar ? (
+                        <Image source={{ uri: mediaItem.avatar }} style={styles.tinyAvatar} />
+                      ) : (
+                        <View style={styles.tinyAvatarPlaceholder}>
+                          <Feather name="user" size={10} color="#FFF" />
+                        </View>
+                      )}
+                      <Text style={styles.tinyUsername} numberOfLines={1}>
+                        {mediaItem.username || 'Spotr User'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 );
               })}
             </View>
@@ -851,5 +911,29 @@ const styles = StyleSheet.create({
   },
   missingText: {
     color: textPrimary,
+  },
+  userRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    gap: 6,
+  },
+  tinyAvatar: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+  },
+  tinyAvatarPlaceholder: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#2A2C36',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tinyUsername: {
+    color: textSecondary,
+    fontSize: 12,
+    flex: 1,
   },
 });
